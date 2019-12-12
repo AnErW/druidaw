@@ -99,21 +99,19 @@ fn ui_builder(consumer: Arc<Mutex<Option<Receiver<f64>>>>) -> impl Widget<State>
         .fix_height(50.0)
         .fix_width(100.0);
 
-    let label = Label::new("0:00 / 3:14")
-        .padding(20.0)
-        .border(Color::grey(0.5), 2.0);
-
     let big_text_label = EnvScope::new(
         |env| {
             env.set(theme::TEXT_SIZE_NORMAL, 24.0);
         },
-        label,
+        Label::new("0:00 / 3:14")
+            .padding(20.0)
+            .border(Color::grey(0.5), 2.0),
     );
 
     let mut volume_column = Flex::column();
 
-    let volume_l = VolumeMeter::default().lens(State::left_level);
-    let volume_r = VolumeMeter::default().lens(State::right_level);
+    let volume_l = VolumeMeter::new().lens(State::left_level);
+    let volume_r = VolumeMeter::new().lens(State::right_level);
     let volume_slider = Slider::new().lens(State::volume);
 
     volume_column.add_child(volume_l, 0.5);
