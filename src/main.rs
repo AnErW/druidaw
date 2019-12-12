@@ -46,11 +46,11 @@ fn main() {
 
     // 1. open a client
     let (client, _status) =
-        jack::Client::new("rust_jack_sine", jack::ClientOptions::NO_START_SERVER).unwrap();
+        jack::Client::new("druidaw", jack::ClientOptions::NO_START_SERVER).unwrap();
 
     // 2. register port
     let mut out_port = client
-        .register_port("sine_out", jack::AudioOut::default())
+        .register_port("output", jack::AudioOut::default())
         .unwrap();
 
     // 3. define process callback handler
@@ -70,7 +70,9 @@ fn main() {
     );
 
     // 4. activate the client
-    let _active_client = client.activate_async((), process).unwrap();
+    let active_client = client.activate_async((), process).unwrap();
+    active_client.as_client().connect_ports_by_name("druidaw:output", "system:playback_1");
+    active_client.as_client().connect_ports_by_name("druidaw:output", "system:playback_2");
     // processing starts here
 
     let state = State {
