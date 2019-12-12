@@ -6,6 +6,8 @@ edition = "2018"
 
 [dependencies]
 druid = { git = "https://github.com/xi-editor/druid", rev = "4cdd7844330c7870bb4fc8b7d759b587d23bb0a4" }
-bounded-spsc-queue = "0.4.0"
+crossbeam-channel = "0.4.0"
 hound = "3.4.0"
 itertools = "0.8.2"
+log = "0.4.8"
+jack = "0.6.2"
