@@ -28,7 +28,7 @@ fn main() {
     let (p2, c2) = bounded(4800);
 
     thread::spawn(move || {
-        let mut reader = WavReader::open("/Users/futurepaul/Music/ahh_48.wav").unwrap();
+        let mut reader = WavReader::open("/home/crs/Downloads/nanou2.wav").unwrap();
         let samples: hound::WavSamples<'_, std::io::BufReader<std::fs::File>, i16> =
             reader.samples();
         for s in samples.step_by(2) {
