@@ -1,11 +1,12 @@
 use std::sync::{Arc, Mutex};
 
-use druid::{Widget, EventCtx, PaintCtx, BoxConstraints, BaseState, LayoutCtx, Event, Env, UpdateCtx};
-use druid::piet::{Color, RenderContext};
 use druid::kurbo::{Line, Point, Size};
-use log::*;
+use druid::piet::{Color, RenderContext};
+use druid::{
+    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+};
 
-use crossbeam_channel::{Sender, Receiver};
+use crossbeam_channel::Receiver;
 
 pub struct Oscilloscope {
     consumer: Receiver<f64>,
@@ -52,19 +53,37 @@ impl Widget<State> for Oscilloscope {
         }
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&State>, _data: &State, _env: &Env) {
+    fn update(
+        &mut self,
+        _ctx: &mut UpdateCtx,
+        _old_data: Option<&State>,
+        _data: &State,
+        _env: &Env,
+    ) {
         // Don't do anything special on update
     }
 
-    fn layout(&mut self, _ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &State, _env: &Env) -> Size {
+    fn layout(
+        &mut self,
+        _ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &State,
+        _env: &Env,
+    ) -> Size {
         // Take up the entire layout
-        bc.constrain((800.0, 600.0))
+        bc.constrain((800.0, 500.0))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &State, env: &Env) {
+    fn paint(
+        &mut self,
+        paint_ctx: &mut PaintCtx,
+        base_state: &BaseState,
+        _data: &State,
+        _env: &Env,
+    ) {
         let buffer_size = 8192;
         // Consume some samples
-        for i in 0..(48000.0 * self.t) as usize {
+        for _i in 0..(48000.0 * self.t) as usize {
             let x = self.consumer.recv().unwrap();
             self.buffer.push_back(x);
             if self.buffer.len() > buffer_size {
@@ -72,15 +91,21 @@ impl Widget<State> for Oscilloscope {
             }
         }
 
-        // Redraw
-        paint_ctx.clear(Color::from_rgba32_u32(0x000000ff));
-
         // Draw all of the samples we have so far
+        let width = base_state.size().width;
+        let height = base_state.size().height;
+
         let red = Color::from_rgba32_u32(0xff0000ff);
         if self.buffer.len() > 0 {
-            for x in 0..(self.buffer.len()-1) {
-                let p0 = Point::new(x as f64 * 800.0 / (buffer_size as f64), self.buffer[x] * 300.0 + 300.0);
-                let p1 = Point::new((x+1) as f64 * 800.0 / (buffer_size as f64), self.buffer[x+1] * 300.0 + 300.0);
+            for x in 0..(self.buffer.len() - 1) {
+                let p0 = Point::new(
+                    x as f64 * width / (buffer_size as f64),
+                    (self.buffer[x] * height / 2.0) + (height / 2.0),
+                );
+                let p1 = Point::new(
+                    (x + 1) as f64 * width / (buffer_size as f64),
+                    (self.buffer[x + 1] * height / 2.0) + (height / 2.0),
+                );
                 let line = Line::new(p0, p1);
                 paint_ctx.stroke(line, &red, 1.0);
             }
