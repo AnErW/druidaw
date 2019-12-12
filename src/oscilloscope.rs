@@ -27,7 +27,7 @@ impl Oscilloscope {
 }
 
 impl Widget<State> for Oscilloscope {
-    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut State, _env: &Env) {
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut State, _env: &Env) {
         // Don't handle events
     }
 

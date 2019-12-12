@@ -36,7 +36,8 @@ fn main() {
 
     let consumer = Arc::new(Mutex::new(Some(c)));
 
-    let window = WindowDesc::new(move || { Oscilloscope::new(consumer.clone()) });
+    let window = WindowDesc::new(move || { Oscilloscope::new(consumer.clone()) })
+        .window_size((800.0, 600.0));
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(state)
