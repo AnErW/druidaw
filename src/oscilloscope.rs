@@ -7,15 +7,15 @@ use druid::kurbo::{Line, Point, Size};
 use bounded_spsc_queue::{Producer, Consumer};
 
 pub struct Oscilloscope {
-    consumer: Consumer<i16>,
-    buffer: VecDeque<i16>,
+    consumer: Consumer<f64>,
+    buffer: VecDeque<f64>,
 }
 
 use super::State;
 use std::collections::VecDeque;
 
 impl Oscilloscope {
-    pub fn new(consumer: Arc<Mutex<Option<Consumer<i16>>>>) -> Self {
+    pub fn new(consumer: Arc<Mutex<Option<Consumer<f64>>>>) -> Self {
         let mut c = consumer.lock().unwrap();
         let mut new_consumer = None;
         std::mem::swap(&mut *c, &mut new_consumer);
@@ -55,10 +55,11 @@ impl Widget<State> for Oscilloscope {
         // Redraw
         paint_ctx.clear(Color::from_rgba32_u32(0x000000ff));
 
+        // Draw all of the samples we have so far
         let red = Color::from_rgba32_u32(0xff0000ff);
-        for x in 0..self.buffer.len().min(799) {
-            let p0 = Point::new(x as f64, self.buffer[x] as f64 * 100.0 + 100.0);
-            let p1 = Point::new((x+1) as f64, self.buffer[x+1] as f64 * 100.0 + 100.0);
+        for x in 0..(self.buffer.len()-1) {
+            let p0 = Point::new(x as f64, self.buffer[x] * 300.0 + 300.0);
+            let p1 = Point::new((x+1) as f64, self.buffer[x+1] * 300.0 + 300.0);
             let line = Line::new(p0, p1);
             paint_ctx.stroke(line, &red, 1.0);
         }

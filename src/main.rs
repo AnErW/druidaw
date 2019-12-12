@@ -5,6 +5,7 @@ use std::collections::VecDeque;
 use bounded_spsc_queue::{Producer, Consumer};
 use hound::WavReader;
 use druid::{AppLauncher, WindowDesc, Data, Lens, Widget};
+use itertools::Itertools;
 
 mod oscilloscope;
 use oscilloscope::Oscilloscope;
@@ -18,9 +19,13 @@ fn main() {
     let (p, c) = bounded_spsc_queue::make(4800);
     thread::spawn(move|| {
         let mut reader = WavReader::open("/home/crs/Downloads/lifeformed.wav").unwrap();
-        let samples = reader.samples();
-        for s in samples {
-            p.push(s.unwrap());
+        let samples: hound::WavSamples<'_, std::io::BufReader<std::fs::File>, i16> = reader.samples();
+        // Samples are interleaved, so take every other one.
+        for s in samples.step_by(2) {
+            let val = s.unwrap();
+            let val_f32 = (val as f64) / (std::i16::MAX as f64);
+            //println!("{}", val_f32);
+            p.push(val_f32);
         }
     });
 
