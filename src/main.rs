@@ -77,7 +77,10 @@ fn main() {
 
             // Write output
             for v in out.iter_mut() {
-                *v = c2.recv().unwrap() as f32;
+                match c2.try_recv() {
+                    Ok(sample) => *v = sample as f32,
+                    Err(e) => *v = 0.0,
+                }
             }
 
             // Continue as normal
@@ -112,7 +115,9 @@ fn main() {
 
     let consumer = Arc::new(Mutex::new(Some(c)));
 
-    let window = WindowDesc::new(move || ui_builder(consumer.clone())).window_size((800.0, 600.0));
+    let window = WindowDesc::new(move || {
+        ui_builder(consumer.clone())
+    }).window_size((800.0, 600.0));
     AppLauncher::with_window(window)
         .configure_env(|env| {
             env.set(theme::WINDOW_BACKGROUND_COLOR, Color::BLACK);

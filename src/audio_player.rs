@@ -41,10 +41,8 @@ impl Widget<State> for AudioPlayer {
                     ctx.request_anim_frame();
                 }
             }
-            Event::AnimFrame(interval) => {
+            Event::AnimFrame(_interval) => {
                 if data.is_playing {
-                    let delta_t = (*interval as f64) * 1e-9;
-
                     // Consume samples
                     loop {
                         let sample = self.consumer.try_recv();
@@ -56,7 +54,6 @@ impl Widget<State> for AudioPlayer {
                             data.audio_buffer.pop_front();
                         }
                     }
-
                     ctx.request_anim_frame();
                 }
             }
