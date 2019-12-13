@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex};
 
 use crossbeam_channel::Receiver;
 use druid::{
-    kurbo::Size,
-    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    kurbo::Size, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Selector,
+    UpdateCtx, Widget,
 };
 
 use super::State;
@@ -32,27 +32,36 @@ impl Widget<State> for AudioPlayer {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut State, _env: &Env) {
         // Fetch samples from the channel, and push them into the application state as needed.
         log::info!("AudioPlayer EVENT");
+
         match event {
-            Event::AnimFrame(interval) => {
-                let delta_t = (*interval as f64) * 1e-9;
-
-                // Consume samples
-                loop {
-                    let sample = self.consumer.try_recv();
-                    if sample.is_err() {
-                        break;
-                    }
-                    data.audio_buffer.push_back(sample.unwrap());
-                    if data.audio_buffer.len() > AUDIO_BUFFER_SIZE {
-                        data.audio_buffer.pop_front();
-                    }
+            Event::Command(command) => {
+                let play_selector = Selector::new("PLAY");
+                if command.selector == play_selector {
+                    log::info!("Play command received.");
+                    ctx.request_anim_frame();
                 }
+            }
+            Event::AnimFrame(interval) => {
+                if data.is_playing {
+                    let delta_t = (*interval as f64) * 1e-9;
 
-                ctx.request_anim_frame();
+                    // Consume samples
+                    loop {
+                        let sample = self.consumer.try_recv();
+                        if sample.is_err() {
+                            break;
+                        }
+                        data.audio_buffer.push_back(sample.unwrap());
+                        if data.audio_buffer.len() > AUDIO_BUFFER_SIZE {
+                            data.audio_buffer.pop_front();
+                        }
+                    }
+
+                    ctx.request_anim_frame();
+                }
             }
             _ => (),
         }
-
 
         ctx.invalidate();
     }
@@ -64,7 +73,6 @@ impl Widget<State> for AudioPlayer {
         _data: &State,
         _env: &Env,
     ) {
-        // Don't do anything special on update
     }
 
     fn layout(
@@ -80,8 +88,8 @@ impl Widget<State> for AudioPlayer {
 
     fn paint(
         &mut self,
-        paint_ctx: &mut PaintCtx,
-        base_state: &BaseState,
+        _paint_ctx: &mut PaintCtx,
+        _base_state: &BaseState,
         _data: &State,
         _env: &Env,
     ) {
