@@ -1,7 +1,12 @@
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+// TODO: VecDeque is **NOT** suitable for real-time audio.
+use std::collections::VecDeque;
+
+// TODO: crossbeam_channel::bounded (MPMC channel) is **NOT** suitable for real-time audio.
 use crossbeam_channel::{bounded, Receiver};
+
 use druid::{
     piet::Color,
     theme,
@@ -16,8 +21,13 @@ use oscilloscope::Oscilloscope;
 mod volume_meter;
 use volume_meter::VolumeMeter;
 
+mod audio_player;
+use audio_player::AudioPlayer;
+
 #[derive(Clone, Data, Lens)]
 struct State {
+    #[druid(ignore)]
+    audio_buffer: VecDeque<f64>,
     volume: f64,
     left_level: f64,
     right_level: f64,
@@ -31,15 +41,15 @@ fn main() {
         let mut reader = WavReader::open("/home/crs/Downloads/nanou2.wav").unwrap();
         let samples: hound::WavSamples<'_, std::io::BufReader<std::fs::File>, i16> =
             reader.samples();
+        // Samples are interleaved. Assuming two channels, we want to take every other sample.
         for s in samples.step_by(2) {
             let val = s.unwrap();
             let val_f32 = (val as f64) / (std::i16::MAX as f64);
-            //println!("{}", val_f32);
             if let Err(e) = p.send(val_f32) {
-                log::error!("{}", e)
+                log::error!("p: {}", e)
             };
             if let Err(e) = p2.send(val_f32) {
-                log::error!("{}", e)
+                log::error!("p2: {}", e)
             };
         }
     });
@@ -76,6 +86,7 @@ fn main() {
     // processing starts here
 
     let state = State {
+        audio_buffer: VecDeque::new(),
         volume: 0.5,
         left_level: 0.7,
         right_level: 0.99,
@@ -124,8 +135,9 @@ fn ui_builder(consumer: Arc<Mutex<Option<Receiver<f64>>>>) -> impl Widget<State>
     row.add_child(big_text_label.center(), 1.0);
     row.add_child(volume_column.center().padding(10.0), 1.0);
 
+    col.add_child(AudioPlayer::new(consumer), 0.0);
     col.add_child(row.fix_height(100.0), 0.0);
-    col.add_child(Oscilloscope::new(consumer), 1.0);
+    col.add_child(Oscilloscope::new(), 1.0);
 
     col
 }
