@@ -11,7 +11,7 @@ use druid::{
     piet::Color,
     theme,
     widget::{Button, EnvScope, Flex, Label, Slider, WidgetExt},
-    AppLauncher, Data, Lens, Widget, WindowDesc,
+    AppLauncher, Data, Lens, Selector, Widget, WindowDesc,
 };
 use hound::WavReader;
 
@@ -31,14 +31,20 @@ struct State {
     volume: f64,
     left_level: f64,
     right_level: f64,
+    is_playing: bool,
 }
 
 fn main() {
     let (p, c) = bounded(4800);
     let (p2, c2) = bounded(4800);
 
+    let path = std::env::args()
+        .skip(1)
+        .next()
+        .expect("Expected a path to a 48khz WAV file");
+
     thread::spawn(move || {
-        let mut reader = WavReader::open("/home/crs/Downloads/nanou2.wav").unwrap();
+        let mut reader = WavReader::open(path).unwrap();
         let samples: hound::WavSamples<'_, std::io::BufReader<std::fs::File>, i16> =
             reader.samples();
         // Samples are interleaved. Assuming two channels, we want to take every other sample.
@@ -81,8 +87,19 @@ fn main() {
 
     // 4. activate the client
     let active_client = client.activate_async((), process).unwrap();
-    active_client.as_client().connect_ports_by_name("druidaw:output", "system:playback_1");
-    active_client.as_client().connect_ports_by_name("druidaw:output", "system:playback_2");
+    if let Err(e) = active_client
+        .as_client()
+        .connect_ports_by_name("druidaw:output", "system:playback_1")
+    {
+        log::error!("system:playback_1: {}", e);
+    }
+    if let Err(e) = active_client
+        .as_client()
+        .connect_ports_by_name("druidaw:output", "system:playback_2")
+    {
+        log::error!("system:playback_2: {}", e);
+    }
+
     // processing starts here
 
     let state = State {
@@ -90,6 +107,7 @@ fn main() {
         volume: 0.5,
         left_level: 0.7,
         right_level: 0.99,
+        is_playing: false,
     };
 
     let consumer = Arc::new(Mutex::new(Some(c)));
@@ -108,9 +126,19 @@ fn ui_builder(consumer: Arc<Mutex<Option<Receiver<f64>>>>) -> impl Widget<State>
     let mut col = Flex::column();
     let mut row = Flex::row();
 
-    let button = Button::new("Play", |_ctx, _data, _env| {})
-        .fix_height(50.0)
-        .fix_width(100.0);
+    let button = Button::new("Play / Stop", |ctx, data: &mut State, _env| {
+        // Toggle is_playing
+        // This is how AudioPlayer knows when to stop.
+        data.is_playing = !data.is_playing;
+
+        // Submit a command with a custom Selector.
+        // This is how AudioPlayer knows when to start.
+        if data.is_playing {
+            ctx.submit_command(Selector::new("PLAY"), None);
+        }
+    })
+    .fix_height(50.0)
+    .fix_width(100.0);
 
     let big_text_label = EnvScope::new(
         |env| {
