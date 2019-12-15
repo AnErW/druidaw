@@ -4,9 +4,7 @@ use std::thread;
 // TODO: VecDeque is **NOT** suitable for real-time audio.
 use std::collections::VecDeque;
 
-// TODO: crossbeam_channel::bounded (MPMC channel) is **NOT** suitable for real-time audio.
 use crossbeam_channel::{bounded, Receiver};
-
 use druid::{
     piet::Color,
     theme,
@@ -14,6 +12,7 @@ use druid::{
     AppLauncher, Data, Lens, Selector, Widget, WindowDesc,
 };
 use hound::WavReader;
+use arraydeque::{ArrayDeque, Wrapping};
 
 mod oscilloscope;
 use oscilloscope::Oscilloscope;
@@ -24,10 +23,12 @@ use volume_meter::VolumeMeter;
 mod audio_player;
 use audio_player::AudioPlayer;
 
+const AUDIO_BUFFER_LENGTH: usize = 512;
+
 #[derive(Clone, Data, Lens)]
 struct State {
     #[druid(ignore)]
-    audio_buffer: VecDeque<f64>,
+    audio_buffer: ArrayDeque<[f64; AUDIO_BUFFER_LENGTH], Wrapping>,
     volume: f64,
     left_level: f64,
     right_level: f64,
@@ -105,13 +106,18 @@ fn main() {
 
     // processing starts here
 
-    let state = State {
-        audio_buffer: VecDeque::new(),
+    let mut state = State {
+        audio_buffer: ArrayDeque::new(),
         volume: 0.5,
-        left_level: 0.7,
-        right_level: 0.99,
+        left_level: 0.0,
+        right_level: 0.0,
         is_playing: false,
     };
+
+    // Saturate the ArrayDeque so that our oscilloscope doesn't do weird stuff on start
+    for _ in 0..AUDIO_BUFFER_LENGTH {
+        state.audio_buffer.push_back(0.0);
+    }
 
     let consumer = Arc::new(Mutex::new(Some(c)));
 

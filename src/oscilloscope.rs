@@ -52,19 +52,29 @@ impl Widget<State> for Oscilloscope {
         let height = base_state.size().height;
 
         let white = Color::from_rgba32_u32(0xffffffff);
-        if data.audio_buffer.len() > 0 {
-            for x in 0..(data.audio_buffer.len() - 1) {
-                let p0 = Point::new(
-                    x as f64 * width / (data.audio_buffer.len() as f64),
-                    (data.audio_buffer[x] * height / 2.0) + (height / 2.0),
-                );
-                let p1 = Point::new(
-                    (x + 1) as f64 * width / (data.audio_buffer.len() as f64),
-                    (data.audio_buffer[x + 1] * height / 2.0) + (height / 2.0),
-                );
-                let line = Line::new(p0, p1);
-                paint_ctx.stroke(line, &white, 1.0);
+
+        let mut prev = 0.0;
+        for (index, d) in data.audio_buffer.iter().enumerate() {
+            if index == 0 {
+                prev = *d;
+                continue;
             }
+
+            let p0 = Point::new(
+                index as f64 * width / (data.audio_buffer.len() as f64),
+                prev * height / 2.0 + (height / 2.0),
+            );
+
+            let p1 = Point::new(
+                index as f64 * width / (data.audio_buffer.len() as f64),
+                *d * height / 2.0 + (height / 2.0),
+            );
+
+            let line = Line::new(p0, p1);
+            paint_ctx.stroke(line, &white, 1.0);
+
+
+            prev = *d;
         }
     }
 }
