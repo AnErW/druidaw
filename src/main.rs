@@ -27,7 +27,7 @@ const AUDIO_BUFFER_LENGTH: usize = 512;
 
 #[derive(Clone, Data, Lens)]
 struct State {
-    #[druid(ignore)]
+    #[data(ignore)]
     audio_buffer: ArrayDeque<[f64; AUDIO_BUFFER_LENGTH], Wrapping>,
     volume: f64,
     left_level: f64,
@@ -125,7 +125,7 @@ fn main() {
         ui_builder(consumer.clone())
     }).window_size((800.0, 600.0));
     AppLauncher::with_window(window)
-        .configure_env(|env| {
+        .configure_env(|env, _| {
             env.set(theme::WINDOW_BACKGROUND_COLOR, Color::BLACK);
         })
         .use_simple_logger()
@@ -137,7 +137,7 @@ fn ui_builder(consumer: Arc<Mutex<Option<Receiver<f64>>>>) -> impl Widget<State>
     let mut col = Flex::column();
     let mut row = Flex::row();
 
-    let button = Button::new("Play / Stop", |ctx, data: &mut State, _env| {
+    let button = Button::new("Play / Stop").on_click(|ctx, data: &mut State, _env| {
         // Toggle is_playing
         // This is how AudioPlayer knows when to stop.
         data.is_playing = !data.is_playing;
@@ -152,7 +152,7 @@ fn ui_builder(consumer: Arc<Mutex<Option<Receiver<f64>>>>) -> impl Widget<State>
     .fix_width(100.0);
 
     let big_text_label = EnvScope::new(
-        |env| {
+        |env, _| {
             env.set(theme::TEXT_SIZE_NORMAL, 24.0);
         },
         Label::new("0:00 / 3:14")
@@ -166,17 +166,17 @@ fn ui_builder(consumer: Arc<Mutex<Option<Receiver<f64>>>>) -> impl Widget<State>
     let volume_r = VolumeMeter::new().lens(State::right_level);
     let volume_slider = Slider::new().lens(State::volume);
 
-    volume_column.add_child(volume_l, 0.5);
-    volume_column.add_child(volume_r, 0.5);
-    volume_column.add_child(volume_slider, 1.0);
+    volume_column.add_flex_child(volume_l, 0.5);
+    volume_column.add_flex_child(volume_r, 0.5);
+    volume_column.add_flex_child(volume_slider, 1.0);
 
-    row.add_child(button.center(), 1.0);
-    row.add_child(big_text_label.center(), 1.0);
-    row.add_child(volume_column.center().padding(10.0), 1.0);
+    row.add_flex_child(button.center(), 1.0);
+    row.add_flex_child(big_text_label.center(), 1.0);
+    row.add_flex_child(volume_column.center().padding(10.0), 1.0);
 
-    col.add_child(AudioPlayer::new(consumer), 0.0);
-    col.add_child(row.fix_height(100.0), 0.0);
-    col.add_child(Oscilloscope::new(), 1.0);
+    col.add_child(AudioPlayer::new(consumer));
+    col.add_child(row.fix_height(100.0));
+    col.add_flex_child(Oscilloscope::new(), 1.0);
 
     col
 }
