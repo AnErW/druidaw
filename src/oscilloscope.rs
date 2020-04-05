@@ -1,7 +1,7 @@
 use druid::kurbo::{Line, Point, Size};
 use druid::piet::{Color, RenderContext};
 use druid::{
-    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 pub struct Oscilloscope {}
@@ -16,13 +16,22 @@ impl Oscilloscope {
 
 impl Widget<State> for Oscilloscope {
     fn event(&mut self, ctx: &mut EventCtx, _event: &Event, _data: &mut State, _env: &Env) {
-        ctx.invalidate();
+        ctx.request_paint();
+    }
+
+    fn lifecycle(
+        &mut self,
+        _ctx: &mut LifeCycleCtx,
+        _event: &LifeCycle,
+        _data: &State,
+        _env: &Env,
+    ) {
     }
 
     fn update(
         &mut self,
         _ctx: &mut UpdateCtx,
-        _old_data: Option<&State>,
+        _old_data: &State,
         _data: &State,
         _env: &Env,
     ) {
@@ -42,14 +51,12 @@ impl Widget<State> for Oscilloscope {
 
     fn paint(
         &mut self,
-        paint_ctx: &mut PaintCtx,
-        base_state: &BaseState,
+        ctx: &mut PaintCtx,
         data: &State,
         _env: &Env,
     ) {
         // Draw all of the samples we have so far
-        let width = base_state.size().width;
-        let height = base_state.size().height;
+        let Size { width, height } = ctx.size();
 
         let white = Color::from_rgba32_u32(0xffffffff);
 
@@ -71,7 +78,7 @@ impl Widget<State> for Oscilloscope {
             );
 
             let line = Line::new(p0, p1);
-            paint_ctx.stroke(line, &white, 1.0);
+            ctx.stroke(line, &white, 1.0);
 
 
             prev = *d;

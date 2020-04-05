@@ -5,12 +5,14 @@ use std::sync::{Arc, Mutex};
 
 use crossbeam_channel::Receiver;
 use druid::{
-    kurbo::Size, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Selector,
+    kurbo::Size, BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Selector,
     UpdateCtx, Widget,
 };
 use log::info;
 
 use super::State;
+
+const CONSUME_SAMPLES: Selector = Selector::new("CONSUME_SAMPLES");
 
 // TODO: This seemingly has to be tweaked per-song...?
 const AUDIO_DB_RANGE: f64 = 70.0;
@@ -47,10 +49,7 @@ impl Widget<State> for AudioPlayer {
                 if command.selector == play_selector {
                     log::info!("Play command received.");
                     ctx.request_anim_frame();
-                }
-            }
-            Event::AnimFrame(_interval) => {
-                if data.is_playing {
+                } else if command.selector == CONSUME_SAMPLES {
                     // Consume samples
                     loop {
                         let sample = self.consumer.try_recv();
@@ -90,13 +89,34 @@ impl Widget<State> for AudioPlayer {
             _ => (),
         }
 
-        ctx.invalidate();
+        ctx.request_paint();
+    }
+
+    fn lifecycle(
+        &mut self,
+        ctx: &mut LifeCycleCtx,
+        event: &LifeCycle,
+        data: &State,
+        _env: &Env,
+    ) {
+        log::info!("AudioPlayer LIFECYCLE");
+
+        match event {
+            LifeCycle::AnimFrame(_interval) => {
+                if data.is_playing {
+                    ctx.submit_command(CONSUME_SAMPLES, ctx.widget_id());
+                }
+            }
+            _ => (),
+        }
+
+        ctx.request_paint();
     }
 
     fn update(
         &mut self,
         _ctx: &mut UpdateCtx,
-        _old_data: Option<&State>,
+        _old_data: &State,
         _data: &State,
         _env: &Env,
     ) {
@@ -115,8 +135,7 @@ impl Widget<State> for AudioPlayer {
 
     fn paint(
         &mut self,
-        _paint_ctx: &mut PaintCtx,
-        _base_state: &BaseState,
+        _ctx: &mut PaintCtx,
         _data: &State,
         _env: &Env,
     ) {

@@ -3,7 +3,7 @@ use druid::{
     piet::{Color, LinearGradient, RenderContext, UnitPoint},
     theme,
     widget::Align,
-    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 #[derive(Default)]
@@ -18,8 +18,17 @@ impl VolumeMeter {
 impl Widget<f64> for VolumeMeter {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut f64, _env: &Env) {}
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
-        ctx.invalidate();
+    fn lifecycle(
+        &mut self,
+        _ctx: &mut LifeCycleCtx,
+        _event: &LifeCycle,
+        _data: &f64,
+        _env: &Env,
+    ) {
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &f64, _data: &f64, _env: &Env) {
+        ctx.request_paint();
     }
 
     fn layout(
@@ -46,13 +55,13 @@ impl Widget<f64> for VolumeMeter {
         }
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
 
         let rounded_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
             (Size {
-                width: base_state.size().width,
+                width: ctx.size().width,
                 height: env.get(theme::BASIC_WIDGET_HEIGHT) / 2.0,
             })
             .to_vec2(),
@@ -60,7 +69,7 @@ impl Widget<f64> for VolumeMeter {
         );
 
         //Paint the border
-        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER), 2.0);
+        ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
 
         //Paint the level
         let calculated_level_width = clamped * rounded_rect.width();
@@ -84,6 +93,6 @@ impl Widget<f64> for VolumeMeter {
                 Color::rgb8(0xff, 0x00, 0x00),
             ),
         );
-        paint_ctx.fill(rounded_rect, &meter_gradient);
+        ctx.fill(rounded_rect, &meter_gradient);
     }
 }
